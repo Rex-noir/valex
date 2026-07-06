@@ -54,7 +54,7 @@ impl Driver for Laravel {
 
         let public_path = path.join("public");
 
-        let nginx_config = include_str!("../stubs/laravel-nginx.conf")
+        let nginx_config = include_str!("../stubs/php-fpm-nginx.conf")
             .replace("{{VALEX_DOMAIN}}", &domain)
             .replace("{{VALEX_ROOT}}", &public_path.to_string_lossy())
             .replace("{{DRIVER}}", Self::name(self))
