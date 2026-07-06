@@ -9,7 +9,6 @@ pub trait UserProvider {
     fn home_dir(&self, username: &str) -> Result<PathBuf>;
     fn uid(&self, username: &str) -> Result<u32>;
     fn gid(&self, username: &str) -> Result<u32>;
-    fn is_sudo_user(&self) -> bool;
 }
 
 pub struct SystemUserProvider;
@@ -50,9 +49,5 @@ impl UserProvider for SystemUserProvider {
     fn gid(&self, username: &str) -> Result<u32> {
         let user = get_user_by_name(username).expect("failed to look up user");
         Ok(user.primary_group_id())
-    }
-
-    fn is_sudo_user(&self) -> bool {
-        env::var_os("SUDO_USER").is_some()
     }
 }

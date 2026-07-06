@@ -7,7 +7,7 @@ use std::{
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct PhpInstallation {
     pub fpm_config_path: String,
     pub fpm_socket_path: String,
@@ -18,6 +18,12 @@ pub struct PhpInstallation {
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Configuration {
     pub php: HashMap<String, PhpInstallation>,
+}
+
+impl PartialEq for Configuration {
+    fn eq(&self, other: &Self) -> bool {
+        self.php == other.php
+    }
 }
 
 impl Configuration {
