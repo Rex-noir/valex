@@ -69,7 +69,8 @@ impl Driver for Laravel {
 
         fs::write(&nginx_file_path, nginx_config)?;
 
-        let status = Command::new("systemctl")
+        let status = Command::new("sudo")
+            .arg("systemctl")
             .args(["restart", "nginx"])
             .status()?;
 

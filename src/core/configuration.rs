@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 pub struct PhpInstallation {
     pub fpm_config_path: String,
     pub fpm_socket_path: String,
+    pub fpm_service_name: String,
     pub fpm_binary_path: Option<String>,
     pub cli_binary_path: Option<String>,
 }

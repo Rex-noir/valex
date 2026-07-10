@@ -13,7 +13,8 @@ impl Dns {
 
         // check systemd version
 
-        let version = Command::new("systemctl")
+        let version = Command::new("sudo")
+            .arg("systemctl")
             .args(["--version"])
             .output()
             .ok()
