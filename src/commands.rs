@@ -5,10 +5,13 @@ use crate::core::AppContext;
 use crate::drivers;
 
 pub(crate) mod completions;
+pub(crate) mod elevate;
 pub(crate) mod proxy;
 pub(crate) mod restart;
 pub(crate) mod setup;
 pub(crate) mod status;
+pub(crate) mod unproxy;
+pub(crate) mod unserve;
 
 pub struct CommandDescriptor {
     pub name: &'static str,
@@ -19,9 +22,12 @@ pub struct CommandDescriptor {
 pub(crate) fn core_commands() -> Vec<CommandDescriptor> {
     vec![
         completions::descriptor(),
+        elevate::descriptor(),
         proxy::descriptor(),
         setup::descriptor(),
         status::descriptor(),
+        unproxy::descriptor(),
+        unserve::descriptor(),
         restart::descriptor(),
     ]
 }

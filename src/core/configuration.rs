@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     fs::{exists, read_to_string, write},
     path::Path,
 };
@@ -18,7 +18,7 @@ pub struct PhpInstallation {
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Configuration {
-    pub php: HashMap<String, PhpInstallation>,
+    pub php: BTreeMap<String, PhpInstallation>,
 }
 
 impl PartialEq for Configuration {
