@@ -1,87 +1,88 @@
-use std::{fs, process::Command};
+use std::{env, fs, path::PathBuf, process::Command};
 
 use anyhow::{Context, Result};
+use clap::ArgMatches;
 use slug::slugify;
 
 use crate::{
     core::AppContext,
-    drivers::{Driver, ServeContext},
+    drivers::{Driver, DriverCommand},
 };
+
+static NAME: &str = "Laravel";
 
 pub struct Laravel;
 
-impl Driver for Laravel {
-    fn name(&self) -> &'static str {
-        "Laravel"
-    }
+fn laravel_handler(m: &ArgMatches, app: &AppContext) -> Result<()> {
+    let path: PathBuf = {
+        let p = m.get_one::<String>("path").map(String::as_str).unwrap_or(".");
+        if p == "." {
+            env::current_dir()?
+        } else {
+            PathBuf::from(p)
+        }
+    };
 
-    fn serves(&self, path: &std::path::Path) -> bool {
-        path.join("artisan").exists() && path.join("public").join("index.php").exists()
-    }
+    let php_version = m.get_one::<String>("php-version").context("PHP version is required")?;
 
-    fn serve(
-        &self,
-        ServeContext {
-            php_version,
-            domain,
-            path,
-            ..
-        }: ServeContext,
-        app: &AppContext,
-    ) -> Result<()> {
-        println!("→ Serving laravel project ...");
-
-        let php_version = php_version.context("PHP version is required")?;
-
-        let config = &app.config;
-
-        let php_installation = config.php.get(&php_version).context(format!(
-            "Failed to get php installation config for php {}",
-            php_version
-        ))?;
-
-        let mut domain = domain.unwrap_or_else(|| {
+    let mut domain = m
+        .get_one::<String>("domain")
+        .cloned()
+        .unwrap_or_else(|| {
             let name = path.file_name().unwrap().to_string_lossy();
             slugify(name.as_ref())
         });
 
-        if !domain.ends_with(".test") {
-            domain.push_str(".test");
-        }
+    if !domain.ends_with(".test") {
+        domain.push_str(".test");
+    }
 
-        println!("✓ Using domain: {}", domain);
-        println!("✓ Using PHP-FPM: {}", php_version);
+    let php_installation = app.config.php.get(php_version).context(format!(
+        "Failed to get php installation config for php {php_version}",
+    ))?;
 
-        let public_path = path.join("public");
+    println!("✓ Using domain: {domain}");
+    println!("✓ Using PHP-FPM: {php_version}");
 
-        let nginx_config = include_str!("../stubs/php-fpm-nginx.conf")
-            .replace("{{VALEX_DOMAIN}}", &domain)
-            .replace("{{VALEX_ROOT}}", &public_path.to_string_lossy())
-            .replace("{{DRIVER}}", Self::name(self))
-            .replace(
-                "{{VALEX_PHP_FPM_SOCKET}}",
-                &php_installation.fpm_socket_path,
-            );
+    let public_path = path.join("public");
 
-        let nginx_file_path = app.nginx_files_path.join(format!("{domain}.conf"));
+    let nginx_config = include_str!("../stubs/php-fpm-nginx.conf")
+        .replace("{{VALEX_DOMAIN}}", &domain)
+        .replace("{{VALEX_ROOT}}", &public_path.to_string_lossy())
+        .replace("{{DRIVER}}", NAME)
+        .replace("{{VALEX_PHP_FPM_SOCKET}}", &php_installation.fpm_socket_path);
 
-        println!("→ Writing nginx file to {}", nginx_file_path.display());
+    let nginx_file_path = app.nginx_files_path.join(format!("{domain}.conf"));
 
-        fs::write(&nginx_file_path, nginx_config)?;
+    fs::write(&nginx_file_path, nginx_config)?;
 
-        let status = Command::new("sudo")
-            .arg("systemctl")
-            .args(["restart", "nginx"])
-            .status()?;
+    let status = Command::new("sudo")
+        .arg("systemctl")
+        .args(["restart", "nginx"])
+        .status()?;
 
-        if status.success() {
-            println!("Nginx file created successfully!")
-        } else {
-            println!("Failed to reload nginx, please reload it manually.")
-        }
-
+    if status.success() {
         println!("✓ Nginx created successfully");
+    } else {
+        println!("Failed to reload nginx, please reload it manually.");
+    }
 
-        Ok(())
+    Ok(())
+}
+
+impl Driver for Laravel {
+    fn name(&self) -> &'static str {
+        NAME
+    }
+
+    fn commands(&self) -> Vec<DriverCommand> {
+        vec![DriverCommand {
+            command: clap::Command::new("laravel")
+                .about("Serve a Laravel project")
+                .arg(clap::arg!([path] "Project directory").default_value("."))
+                .arg(clap::arg!([domain] "Custom domain"))
+                .arg(clap::arg!(--"php-version" <VERSION> "PHP version").required(true)),
+            handler: laravel_handler,
+        }]
     }
 }

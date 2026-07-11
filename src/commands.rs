@@ -1,30 +1,36 @@
-use clap::Subcommand;
+use anyhow::{Result, bail};
+use clap::ArgMatches;
 
-use anyhow::Result;
-
-use crate::commands::setup::SetupArgs;
 use crate::core::AppContext;
+use crate::drivers;
 
-mod install;
-mod restart;
-mod serve;
-mod setup;
+pub(crate) mod completions;
+pub(crate) mod restart;
+pub(crate) mod setup;
 
-#[derive(Debug, Subcommand)]
-pub enum Commands {
-    Serve(serve::ServeArgs),
-    Install,
-    Setup(SetupArgs),
-    Restart,
-}
-
-impl Commands {
-    pub fn run(self, app: &AppContext) -> Result<()> {
-        match self {
-            Commands::Serve(args) => serve::run(args, app),
-            Commands::Install => install::run(app),
-            Commands::Setup(args) => setup::run(args, app),
-            Commands::Restart => restart::run(app),
+pub fn dispatch(matches: &ArgMatches, app: &AppContext) -> Result<()> {
+    match matches.subcommand() {
+        Some(("serve", sub)) => {
+            let (name, driver_m) = sub
+                .subcommand()
+                .ok_or_else(|| anyhow::anyhow!("serve requires a driver"))?;
+            for driver in drivers::drivers() {
+                for cmd in driver.commands() {
+                    if cmd.command.get_name() == name {
+                        return (cmd.handler)(driver_m, app);
+                    }
+                }
+            }
+            bail!("unknown driver: {name}")
+        }
+        Some(("completions", sub)) => completions::run(sub, app),
+        Some(("setup", sub)) => setup::run(sub, app),
+        Some(("restart", _)) => restart::run(app),
+        Some((name, _)) => bail!("unknown command: {name}"),
+        None => {
+            crate::build_cli().print_help()?;
+            println!();
+            Ok(())
         }
     }
 }

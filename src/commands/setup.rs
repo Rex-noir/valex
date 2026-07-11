@@ -1,41 +1,28 @@
-use anyhow::{Ok, Result};
-use clap::{Args, Subcommand};
+use anyhow::{Result, bail};
+use clap::ArgMatches;
 
 use crate::core::AppContext;
 use crate::setup::{Dns, Nginx, PHPFpm};
 
-#[derive(Debug, Args)]
-pub struct SetupArgs {
-    #[command(subcommand)]
-    pub command: Option<SetupCommand>,
+pub fn command() -> clap::Command {
+    clap::Command::new("setup")
+        .about("Run setup tasks")
+        .subcommand(clap::Command::new("Dns").about("Set up DNS resolution"))
+        .subcommand(clap::Command::new("Nginx").about("Set up nginx"))
+        .subcommand(clap::Command::new("PHPFpm").about("Set up PHP-FPM pool configs"))
 }
 
-#[derive(Debug, Subcommand)]
-pub enum SetupCommand {
-    Dns,
-    Nginx,
-    PHPFpm,
-}
-
-pub fn run(args: SetupArgs, app: &AppContext) -> Result<()> {
-    match args.command {
-        Some(cmd) => match cmd {
-            SetupCommand::Dns => {
-                Dns::setup(app)?;
-            }
-            SetupCommand::Nginx => {
-                Nginx::setup(app)?;
-            }
-            SetupCommand::PHPFpm => {
-                PHPFpm::setup(app)?;
-            }
-        },
+pub fn run(m: &ArgMatches, app: &AppContext) -> Result<()> {
+    match m.subcommand() {
+        Some(("Dns", _)) => Dns::setup(app),
+        Some(("Nginx", _)) => Nginx::setup(app),
+        Some(("PHPFpm", _)) => PHPFpm::setup(app),
+        Some((name, _)) => bail!("unknown setup task: {name}"),
         None => {
             Dns::setup(app)?;
             Nginx::setup(app)?;
             PHPFpm::setup(app)?;
+            Ok(())
         }
     }
-
-    Ok(())
 }

@@ -4,6 +4,10 @@ use anyhow::{Result, bail};
 
 use crate::core::AppContext;
 
+pub fn command() -> clap::Command {
+    clap::Command::new("restart").about("Restart nginx, dnsmasq, and PHP-FPM services")
+}
+
 pub fn run(ctx: &AppContext) -> Result<()> {
     println!("Restarting services:");
 

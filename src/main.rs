@@ -1,15 +1,12 @@
 use anyhow::Result;
-use clap::Parser;
 use valex::{
-    Cli,
+    build_cli, commands,
     core::{AppContext, SystemUserProvider},
 };
 
 fn main() -> Result<()> {
     let app = AppContext::build(&SystemUserProvider::new())?;
-    let cli = Cli::parse();
+    let matches = build_cli().get_matches();
 
-    cli.commands.run(&app)?;
-
-    Ok(())
+    commands::dispatch(&matches, &app)
 }
