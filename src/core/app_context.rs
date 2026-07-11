@@ -16,6 +16,7 @@ pub struct AppContext {
     pub groupname: String,
     pub home_dir: PathBuf,
     pub nginx_files_path: PathBuf,
+    pub ssl_path: PathBuf,
     pub uid: u32,
     pub gid: u32,
 }
@@ -35,6 +36,9 @@ impl AppContext {
         let nginx_files_path = app_dir.join("nginx");
         create_dir_all(&nginx_files_path)?;
 
+        let ssl_path = app_dir.join("ssl");
+        create_dir_all(&ssl_path)?;
+
         let config = Configuration::load_or_default(&config_path)?;
 
         Ok(AppContext {
@@ -44,6 +48,7 @@ impl AppContext {
             username,
             groupname,
             nginx_files_path,
+            ssl_path,
             home_dir,
             uid,
             gid,

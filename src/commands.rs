@@ -8,10 +8,12 @@ pub(crate) mod completions;
 pub(crate) mod elevate;
 pub(crate) mod proxy;
 pub(crate) mod restart;
+pub(crate) mod secure;
 pub(crate) mod setup;
 pub(crate) mod status;
 pub(crate) mod unproxy;
 pub(crate) mod unserve;
+pub(crate) mod unsecure;
 
 pub struct CommandDescriptor {
     pub name: &'static str,
@@ -24,10 +26,12 @@ pub(crate) fn core_commands() -> Vec<CommandDescriptor> {
         completions::descriptor(),
         elevate::descriptor(),
         proxy::descriptor(),
+        secure::descriptor(),
         setup::descriptor(),
         status::descriptor(),
         unproxy::descriptor(),
         unserve::descriptor(),
+        unsecure::descriptor(),
         restart::descriptor(),
     ]
 }

@@ -1,6 +1,6 @@
 use std::{env, fs, path::PathBuf, process::Command};
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use clap::ArgMatches;
 use slug::slugify;
 
@@ -37,6 +37,16 @@ fn laravel_handler(m: &ArgMatches, app: &AppContext) -> Result<()> {
         domain.push_str(".test");
     }
 
+    let https = m.get_flag("https");
+
+    if https {
+        let cert = app.ssl_path.join(format!("{domain}.pem"));
+        let key = app.ssl_path.join(format!("{domain}-key.pem"));
+        if !cert.exists() || !key.exists() {
+            bail!("Certificate not found for {domain}. Run `valex secure {domain}` first.");
+        }
+    }
+
     let php_installation = app.config.php.get(php_version).context(format!(
         "Failed to get php installation config for php {php_version}",
     ))?;
@@ -46,11 +56,23 @@ fn laravel_handler(m: &ArgMatches, app: &AppContext) -> Result<()> {
 
     let public_path = path.join("public");
 
-    let nginx_config = include_str!("../stubs/php-fpm-nginx.conf")
-        .replace("{{VALEX_DOMAIN}}", &domain)
-        .replace("{{VALEX_ROOT}}", &public_path.to_string_lossy())
-        .replace("{{DRIVER}}", NAME)
-        .replace("{{VALEX_PHP_FPM_SOCKET}}", &php_installation.fpm_socket_path);
+    let nginx_config = if https {
+        let cert = app.ssl_path.join(format!("{domain}.pem"));
+        let key = app.ssl_path.join(format!("{domain}-key.pem"));
+        include_str!("../stubs/php-fpm-nginx-ssl.conf")
+            .replace("{{VALEX_DOMAIN}}", &domain)
+            .replace("{{VALEX_SSL_CERT}}", &cert.to_string_lossy())
+            .replace("{{VALEX_SSL_KEY}}", &key.to_string_lossy())
+            .replace("{{VALEX_ROOT}}", &public_path.to_string_lossy())
+            .replace("{{DRIVER}}", NAME)
+            .replace("{{VALEX_PHP_FPM_SOCKET}}", &php_installation.fpm_socket_path)
+    } else {
+        include_str!("../stubs/php-fpm-nginx.conf")
+            .replace("{{VALEX_DOMAIN}}", &domain)
+            .replace("{{VALEX_ROOT}}", &public_path.to_string_lossy())
+            .replace("{{DRIVER}}", NAME)
+            .replace("{{VALEX_PHP_FPM_SOCKET}}", &php_installation.fpm_socket_path)
+    };
 
     let nginx_file_path = app.nginx_files_path.join(format!("{domain}.conf"));
 
@@ -81,7 +103,8 @@ impl Driver for Laravel {
                 .about("Serve a Laravel project")
                 .arg(clap::arg!([path] "Project directory").default_value("."))
                 .arg(clap::arg!([domain] "Custom domain"))
-                .arg(clap::arg!(--"php-version" <VERSION> "PHP version").required(true)),
+                .arg(clap::arg!(--"php-version" <VERSION> "PHP version").required(true))
+                .arg(clap::arg!(--https "Enable HTTPS (run `secure` first to generate certs)")),
             handler: laravel_handler,
         }]
     }
