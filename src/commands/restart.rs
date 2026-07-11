@@ -4,48 +4,52 @@ use anyhow::{Result, bail};
 
 use crate::core::AppContext;
 
-pub fn run(app_context: &AppContext) -> Result<()> {
-    println!("Restarting nginx");
-    let status = Command::new("sudo")
-        .arg("systemctl")
-        .args(["restart", "nginx"])
-        .status()?;
+pub fn run(ctx: &AppContext) -> Result<()> {
+    println!("Restarting services:");
 
-    if !status.success() {
-        bail!("Failed to restart nginx");
-    } else {
-        println!("Nginx restart successful");
-    }
+    restart("nginx")?;
+    restart("dnsmasq")?;
 
-    println!("Restarting dnsmasq");
-    let status = Command::new("sudo")
-        .arg("systemctl")
-        .args(["restart", "dnsmasq"])
-        .status()?;
-    if !status.success() {
-        bail!("Failed to restart dnsmasq");
-    } else {
-        println!("Done");
-    }
-
-    let configuration = &app_context.config;
-
-    for (version, installation) in &configuration.php {
-        println!("Restarting fpm version : {}", version);
-        let fpm_service_name = &installation.fpm_service_name;
-        if !fpm_service_name.is_empty() {
-            let status = Command::new("sudo")
-                .arg("systemctl")
-                .args(["restart", fpm_service_name])
-                .status()?;
-
-            if !status.success() {
-                eprintln!("Failed to restart fpm service. Version : {}", version);
-            } else {
-                println!("Done")
-            }
+    for (version, installation) in &ctx.config.php {
+        let name = &installation.fpm_service_name;
+        if !name.is_empty() {
+            restart_php(version, name);
         }
     }
 
     Ok(())
+}
+
+fn restart(service: &str) -> Result<()> {
+    let status = Command::new("sudo")
+        .arg("systemctl")
+        .args(["restart", service])
+        .status()?;
+
+    if !status.success() {
+        bail!("{service}: restart failed");
+    }
+
+    println!("  {service}: OK");
+    Ok(())
+}
+
+fn restart_php(version: &str, name: &str) {
+    let label = format!("php{version}");
+    let result = Command::new("sudo")
+        .arg("systemctl")
+        .args(["restart", name])
+        .output();
+
+    match result {
+        Ok(out) if out.status.success() => println!("  {label}: OK"),
+        Ok(out) => {
+            println!("  {label}: FAILED");
+            eprintln!("  {}", String::from_utf8_lossy(&out.stderr));
+        }
+        Err(e) => {
+            println!("  {label}: ERROR");
+            eprintln!("{e}");
+        }
+    }
 }
