@@ -3,16 +3,9 @@ use clap::ArgMatches;
 
 use crate::core::AppContext;
 use crate::setup::{Dns, Nginx, PHPFpm};
+use crate::commands::CommandDescriptor;
 
-pub fn command() -> clap::Command {
-    clap::Command::new("setup")
-        .about("Run setup tasks")
-        .subcommand(clap::Command::new("Dns").about("Set up DNS resolution"))
-        .subcommand(clap::Command::new("Nginx").about("Set up nginx"))
-        .subcommand(clap::Command::new("PHPFpm").about("Set up PHP-FPM pool configs"))
-}
-
-pub fn run(m: &ArgMatches, app: &AppContext) -> Result<()> {
+fn setup_run(m: &ArgMatches, app: &AppContext) -> Result<()> {
     match m.subcommand() {
         Some(("Dns", _)) => Dns::setup(app),
         Some(("Nginx", _)) => Nginx::setup(app),
@@ -24,5 +17,19 @@ pub fn run(m: &ArgMatches, app: &AppContext) -> Result<()> {
             PHPFpm::setup(app)?;
             Ok(())
         }
+    }
+}
+
+pub fn descriptor() -> CommandDescriptor {
+    CommandDescriptor {
+        name: "setup",
+        build: || {
+            clap::Command::new("setup")
+                .about("Run setup tasks")
+                .subcommand(clap::Command::new("Dns").about("Set up DNS resolution"))
+                .subcommand(clap::Command::new("Nginx").about("Set up nginx"))
+                .subcommand(clap::Command::new("PHPFpm").about("Set up PHP-FPM pool configs"))
+        },
+        run: setup_run,
     }
 }

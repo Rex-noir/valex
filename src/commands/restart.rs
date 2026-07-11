@@ -1,14 +1,12 @@
 use std::process::Command;
 
 use anyhow::{Result, bail};
+use clap::ArgMatches;
 
 use crate::core::AppContext;
+use crate::commands::CommandDescriptor;
 
-pub fn command() -> clap::Command {
-    clap::Command::new("restart").about("Restart nginx, dnsmasq, and PHP-FPM services")
-}
-
-pub fn run(ctx: &AppContext) -> Result<()> {
+fn restart_run(_m: &ArgMatches, ctx: &AppContext) -> Result<()> {
     println!("Restarting services:");
 
     restart("nginx")?;
@@ -22,6 +20,14 @@ pub fn run(ctx: &AppContext) -> Result<()> {
     }
 
     Ok(())
+}
+
+pub fn descriptor() -> CommandDescriptor {
+    CommandDescriptor {
+        name: "restart",
+        build: || clap::Command::new("restart").about("Restart nginx, dnsmasq, and PHP-FPM services"),
+        run: restart_run,
+    }
 }
 
 fn restart(service: &str) -> Result<()> {
