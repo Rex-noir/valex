@@ -7,6 +7,7 @@ use crate::drivers;
 pub(crate) mod completions;
 pub(crate) mod restart;
 pub(crate) mod setup;
+pub(crate) mod status;
 
 pub struct CommandDescriptor {
     pub name: &'static str,
@@ -18,6 +19,7 @@ pub(crate) fn core_commands() -> Vec<CommandDescriptor> {
     vec![
         completions::descriptor(),
         setup::descriptor(),
+        status::descriptor(),
         restart::descriptor(),
     ]
 }
