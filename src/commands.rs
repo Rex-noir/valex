@@ -5,6 +5,7 @@ use crate::core::AppContext;
 use crate::drivers;
 
 pub(crate) mod completions;
+pub(crate) mod proxy;
 pub(crate) mod restart;
 pub(crate) mod setup;
 pub(crate) mod status;
@@ -18,6 +19,7 @@ pub struct CommandDescriptor {
 pub(crate) fn core_commands() -> Vec<CommandDescriptor> {
     vec![
         completions::descriptor(),
+        proxy::descriptor(),
         setup::descriptor(),
         status::descriptor(),
         restart::descriptor(),
