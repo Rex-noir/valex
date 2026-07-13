@@ -11,8 +11,8 @@ use crate::core::AppContext;
 const SUDOERS_PATH: &str = "/etc/sudoers.d/valex";
 
 fn elevate_run(_m: &ArgMatches, app: &AppContext) -> Result<()> {
-    let systemctl = which("systemctl")
-        .map_err(|_| anyhow::anyhow!("systemctl not found in PATH"))?;
+    let systemctl =
+        which("systemctl").map_err(|_| anyhow::anyhow!("systemctl not found in PATH"))?;
     let systemctl = systemctl.to_string_lossy();
 
     let user = &app.username;
