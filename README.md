@@ -103,10 +103,4 @@ Config file at `~/.config/valex/config.json5`:
 }
 ```
 
-## SELinux
 
-On distros with SELinux enabled, allow nginx to read user content:
-
-```
-sudo setsebool -P httpd_read_user_content 1
-```

@@ -1,6 +1,6 @@
-use std::{fs, path::Path, process::Command};
+use std::process::Command;
 
-use anyhow::{Context, Ok, Result, bail};
+use anyhow::{Result, bail};
 
 use crate::{
     core::{AppContext, CommandManager},
@@ -17,7 +17,10 @@ impl Nginx {
         cm.install_package("nginx")?;
 
         let nginx_state = app.state_dir.join("nginx");
-        fs::create_dir_all(nginx_state.join("tmp"))?;
+        let tmp_dir = nginx_state.join("tmp");
+
+        util::sudo_create_dir_all(&tmp_dir.to_string_lossy())?;
+        util::sudo_chown(&tmp_dir.to_string_lossy(), Some(app.uid), Some(app.gid))?;
 
         Self::write_nginx_config(app)?;
         Self::restart_nginx()?;
@@ -26,9 +29,8 @@ impl Nginx {
     }
 
     fn load_nginx_config(app: &AppContext) -> Result<String> {
-
         let nginx_path = app.nginx_files_path.join("*.conf").display().to_string();
-        let state_nginx = app.state_dir.join("nginx").to_string_lossy().to_string();
+        let state_nginx = app.state_dir.to_string_lossy().to_string();
 
         Ok(include_str!("../stubs/nginx.conf")
             .replace("{{VALEX_USER}}", &app.username)
@@ -40,8 +42,6 @@ impl Nginx {
         let config = Self::load_nginx_config(app)?;
 
         util::sudo_write("/etc/nginx/nginx.conf", &config)?;
-
-        Self::configure_selinux()?;
 
         Ok(())
     }
@@ -55,21 +55,6 @@ impl Nginx {
 
         if !status.success() {
             bail!("Nginx service restart failed");
-        }
-
-        Ok(())
-    }
-
-    fn configure_selinux() -> Result<()> {
-        let selinux_exists = Path::new("/sys/fs/selinux").exists();
-
-        if selinux_exists {
-            let status = Command::new("sudo")
-                .args(["setsebool", "-P", "httpd_read_user_content", "1"])
-                .status()
-                .context("failed to execute setsebool")?;
-
-            anyhow::ensure!(status.success(), "failed to enable httpd_read_user_content");
         }
 
         Ok(())
