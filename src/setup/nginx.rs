@@ -1,4 +1,4 @@
-use std::{path::Path, process::Command};
+use std::{fs, path::Path, process::Command};
 
 use anyhow::{Context, Ok, Result, bail};
 
@@ -16,6 +16,9 @@ impl Nginx {
         let cm = CommandManager::init();
         cm.install_package("nginx")?;
 
+        let nginx_state = app.state_dir.join("nginx");
+        fs::create_dir_all(nginx_state.join("tmp"))?;
+
         Self::write_nginx_config(app)?;
         Self::restart_nginx()?;
 
@@ -25,9 +28,11 @@ impl Nginx {
     fn load_nginx_config(app: &AppContext) -> Result<String> {
 
         let nginx_path = app.nginx_files_path.join("*.conf").display().to_string();
+        let state_nginx = app.state_dir.join("nginx").to_string_lossy().to_string();
 
         Ok(include_str!("../stubs/nginx.conf")
             .replace("{{VALEX_USER}}", &app.username)
+            .replace("{{VALEX_STATE_DIR}}", &state_nginx)
             .replace("{{VALEX_NGINX_CONFIGS_PATH}}", &nginx_path))
     }
 
